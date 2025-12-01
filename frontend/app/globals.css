@@ -1,0 +1,413 @@
+@font-face {
+  font-family: 'Departure Mono';
+  src: url('/fonts/DepartureMono-Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   BRUTALIST DEPARTURE MONO AESTHETIC
+   ============================================ */
+
+:root {
+  --bg-dark: #1a1a1a;
+  --bg-surface: #2a2a2a;
+  --bg-elevated: #3a3a3a;
+  --border: #4a4a4a;
+  --text-primary: #ffffff;
+  --text-secondary: #b0b0b0;
+  --text-muted: #707070;
+  --accent: #7a8a6a;
+  --accent-light: #8b9a7b;
+  --accent-dark: #5a6a4a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Departure Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   TYPOGRAPHY
+   ============================================ */
+
+.text-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.text-value {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+}
+
+.text-heading {
+  font-size: 24px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+}
+
+.text-title {
+  font-size: 32px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-primary);
+}
+
+/* ============================================
+   BORDERS & DIVIDERS
+   ============================================ */
+
+.border-dotted {
+  border-style: dotted;
+  border-color: var(--border);
+}
+
+.border-dashed {
+  border-style: dashed;
+  border-color: var(--border);
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.divider-dotted {
+  border-top: 1px dotted var(--border);
+}
+
+.divider-dashed {
+  border-top: 1px dashed var(--border);
+}
+
+/* ============================================
+   BARCODE COMPONENT
+   ============================================ */
+
+.barcode {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  height: 40px;
+}
+
+.barcode-thick {
+  gap: 3px;
+  height: 50px;
+}
+
+.barcode-bar {
+  background: var(--text-primary);
+  width: 4px;
+}
+
+.barcode-bar.thin {
+  width: 2px;
+}
+
+.barcode-bar.wide {
+  width: 6px;
+}
+
+/* CSS-only barcode pattern */
+.barcode-pattern {
+  height: 50px;
+  width: 100px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--text-primary) 0px,
+    var(--text-primary) 4px,
+    transparent 4px,
+    transparent 6px,
+    var(--text-primary) 6px,
+    var(--text-primary) 8px,
+    transparent 8px,
+    transparent 12px,
+    var(--text-primary) 12px,
+    var(--text-primary) 14px,
+    transparent 14px,
+    transparent 16px,
+    var(--text-primary) 16px,
+    var(--text-primary) 22px,
+    transparent 22px,
+    transparent 24px,
+    var(--text-primary) 24px,
+    var(--text-primary) 26px,
+    transparent 26px,
+    transparent 30px
+  );
+}
+
+.barcode-pattern-dark {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--bg-dark) 0px,
+    var(--bg-dark) 4px,
+    transparent 4px,
+    transparent 6px,
+    var(--bg-dark) 6px,
+    var(--bg-dark) 8px,
+    transparent 8px,
+    transparent 12px,
+    var(--bg-dark) 12px,
+    var(--bg-dark) 14px,
+    transparent 14px,
+    transparent 16px,
+    var(--bg-dark) 16px,
+    var(--bg-dark) 22px,
+    transparent 22px,
+    transparent 24px,
+    var(--bg-dark) 24px,
+    var(--bg-dark) 26px,
+    transparent 26px,
+    transparent 30px
+  );
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.btn {
+  font-family: 'Departure Mono', monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 12px 24px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.btn:hover {
+  background: var(--bg-elevated);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-dark);
+}
+
+.btn-primary:hover {
+  background: var(--accent-light);
+  border-color: var(--accent-light);
+}
+
+.btn-primary:active {
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+}
+
+.btn-ghost {
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  border-color: var(--border);
+}
+
+/* ============================================
+   INPUTS
+   ============================================ */
+
+.input {
+  font-family: 'Departure Mono', monospace;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--text-secondary);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.input-underline {
+  border: none;
+  border-bottom: 1px dotted var(--border);
+  padding: 8px 0;
+  background: transparent;
+}
+
+.input-underline:focus {
+  border-bottom-color: var(--text-primary);
+  border-bottom-style: solid;
+}
+
+/* ============================================
+   CARDS & CONTAINERS
+   ============================================ */
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+}
+
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px dotted var(--border);
+}
+
+.card-body {
+  padding: 20px;
+}
+
+.card-footer {
+  padding: 16px 20px;
+  border-top: 1px dotted var(--border);
+}
+
+/* ============================================
+   SCROLLBAR
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.uppercase {
+  text-transform: uppercase;
+}
+
+.tracking-wide {
+  letter-spacing: 0.1em;
+}
+
+.tracking-wider {
+  letter-spacing: 0.15em;
+}
+
+/* Label-value pair */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.field-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+}
+
+.field-value {
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+}
+
+/* Status indicator */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+}
+
+.status-dot.offline {
+  background: #ff4444;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 768px) {
+  .text-title {
+    font-size: 24px;
+  }
+
+  .text-heading {
+    font-size: 18px;
+  }
+}

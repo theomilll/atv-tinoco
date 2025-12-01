@@ -1,0 +1,46 @@
+# Backend Dockerfile for Flask
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    FLASK_APP=wsgi.py \
+    FLASK_ENV=production
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libmagic1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-download sentence-transformers model during build
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
+# Copy project
+COPY backend/app ./app
+COPY backend/wsgi.py .
+COPY backend/celery_worker.py .
+COPY backend/manage.py .
+
+# Copy and set up entrypoint
+COPY backend/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# Create necessary directories
+RUN mkdir -p media
+
+# Expose port
+EXPOSE 8000
+
+# Set entrypoint and command
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["gunicorn", "wsgi:app", "--bind", "0.0.0.0:8000", "--workers", "4"]
