@@ -54,16 +54,28 @@ resource "aws_ecs_task_definition" "main" {
         }
       ]
 
-      secrets = var.groq_api_key != "" ? [
-        {
-          name      = "GROQ_API_KEY"
-          valueFrom = aws_ssm_parameter.groq_api_key[0].arn
-        },
-        {
-          name      = "SECRET_KEY"
-          valueFrom = aws_ssm_parameter.secret_key[0].arn
-        }
-      ] : []
+      secrets = concat(
+        [
+          {
+            name      = "OLLAMA_HOST"
+            valueFrom = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/chatgepeto/ollama-host"
+          },
+          {
+            name      = "OLLAMA_MODEL"
+            valueFrom = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/chatgepeto/ollama-model"
+          }
+        ],
+        var.groq_api_key != "" ? [
+          {
+            name      = "GROQ_API_KEY"
+            valueFrom = aws_ssm_parameter.groq_api_key[0].arn
+          },
+          {
+            name      = "SECRET_KEY"
+            valueFrom = aws_ssm_parameter.secret_key[0].arn
+          }
+        ] : []
+      )
 
       logConfiguration = {
         logDriver = "awslogs"
@@ -151,8 +163,6 @@ resource "aws_ssm_parameter" "secret_key" {
 
 # Additional IAM policy for SSM access
 resource "aws_iam_role_policy" "ecs_ssm_access" {
-  count = var.groq_api_key != "" ? 1 : 0
-
   name = "${var.project_name}-ecs-ssm-access"
   role = aws_iam_role.ecs_task_execution.id
 
@@ -165,10 +175,16 @@ resource "aws_iam_role_policy" "ecs_ssm_access" {
           "ssm:GetParameters",
           "ssm:GetParameter"
         ]
-        Resource = [
-          aws_ssm_parameter.groq_api_key[0].arn,
-          aws_ssm_parameter.secret_key[0].arn
-        ]
+        Resource = concat(
+          [
+            "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/chatgepeto/ollama-host",
+            "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/chatgepeto/ollama-model"
+          ],
+          var.groq_api_key != "" ? [
+            aws_ssm_parameter.groq_api_key[0].arn,
+            aws_ssm_parameter.secret_key[0].arn
+          ] : []
+        )
       }
     ]
   })
