@@ -29,6 +29,9 @@ sentry-sdk[flask]==1.39.1
 # Utils
 python-decouple==3.8
 
+# API Docs
+flasgger==0.9.7.1
+
 # Development/Testing
 ruff==0.8.2
 pytest==8.3.4

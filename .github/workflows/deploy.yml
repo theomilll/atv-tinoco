@@ -33,6 +33,12 @@ jobs:
           pip install ruff
           ruff check backend/
 
+      - name: Run tests
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          FLASK_ENV=testing SECRET_KEY=test pytest -v
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:

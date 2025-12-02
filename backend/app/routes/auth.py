@@ -12,7 +12,31 @@ bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 @bp.route('/login/', methods=['GET', 'POST'])
 @csrf.exempt
 def login():
-    """Login endpoint - creates session."""
+    """Login endpoint - creates session.
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          required:
+            - username
+            - password
+          properties:
+            username:
+              type: string
+            password:
+              type: string
+    responses:
+      200:
+        description: Login successful
+      400:
+        description: Missing credentials
+      401:
+        description: Invalid credentials
+    """
     if request.method == 'GET':
         # Return empty response for CSRF token fetch
         return jsonify({'status': 'ready'})
@@ -40,7 +64,18 @@ def login():
 @login_required
 @csrf.exempt
 def logout():
-    """Logout endpoint - destroys session."""
+    """Logout endpoint - destroys session.
+    ---
+    tags:
+      - Auth
+    security:
+      - cookieAuth: []
+    responses:
+      200:
+        description: Logout successful
+      401:
+        description: Not authenticated
+    """
     logout_user()
     return jsonify({'message': 'Logout successful'})
 
@@ -48,5 +83,25 @@ def logout():
 @bp.route('/me/', methods=['GET'])
 @login_required
 def current_user_view():
-    """Get current authenticated user."""
+    """Get current authenticated user.
+    ---
+    tags:
+      - Auth
+    security:
+      - cookieAuth: []
+    responses:
+      200:
+        description: Current user info
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+            username:
+              type: string
+            email:
+              type: string
+      401:
+        description: Not authenticated
+    """
     return jsonify(UserSchema().dump(current_user))

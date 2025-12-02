@@ -1,6 +1,7 @@
 """Flask application factory."""
 import os
 
+from flasgger import Swagger
 from flask import Flask
 
 from .config import config
@@ -30,6 +31,22 @@ def create_app(config_name=None):
         expose_headers=['Content-Type', 'X-CSRFToken'],
         allow_headers=['Content-Type', 'X-CSRFToken', 'Authorization'],
     )
+
+    # Swagger/OpenAPI docs
+    Swagger(app, template={
+        'info': {
+            'title': 'ChatGepeto API',
+            'description': 'API do assistente educacional inteligente',
+            'version': '1.0.0',
+        },
+        'securityDefinitions': {
+            'cookieAuth': {
+                'type': 'apiKey',
+                'in': 'cookie',
+                'name': 'session'
+            }
+        }
+    })
 
     # Ensure upload directory exists
     app.config['UPLOAD_FOLDER'].mkdir(parents=True, exist_ok=True)
