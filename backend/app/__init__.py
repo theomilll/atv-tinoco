@@ -21,7 +21,8 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
-    flask_admin.init_app(app)
+    if not app.config.get('TESTING'):
+        flask_admin.init_app(app)
 
     # CORS configuration
     cors.init_app(
@@ -65,9 +66,10 @@ def create_app(config_name=None):
     from .routes import register_blueprints
     register_blueprints(app)
 
-    # Setup Flask-Admin
-    from .admin import setup_admin
-    setup_admin(flask_admin, db)
+    # Setup Flask-Admin (skip in testing to avoid blueprint collision)
+    if not app.config.get('TESTING'):
+        from .admin import setup_admin
+        setup_admin(flask_admin, db)
 
     # User loader for Flask-Login
     from .models import User
