@@ -36,6 +36,7 @@ RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 
 # Copy application code
 COPY backend/app ./app
+COPY backend/migrations ./migrations
 COPY backend/wsgi.py .
 COPY backend/manage.py .
 
