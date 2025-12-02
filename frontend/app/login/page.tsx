@@ -34,13 +34,13 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const csrfResponse = await fetch('http://localhost:8000/api/auth/login/', {
+      const csrfResponse = await fetch('/api/auth/login/', {
         method: 'GET',
         credentials: 'include',
       })
       const csrfToken = csrfResponse.headers.get('X-CSRFToken') || getCookie('csrftoken')
 
-      const response = await fetch('http://localhost:8000/api/auth/login/', {
+      const response = await fetch('/api/auth/login/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

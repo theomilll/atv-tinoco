@@ -26,7 +26,7 @@ interface MessageProps {
   attachments?: Attachment[]
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ''
 
 export function Message({ role, content, username = 'USER', citations, attachments }: MessageProps) {
   const isUser = role === 'user'

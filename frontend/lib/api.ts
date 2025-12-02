@@ -2,7 +2,9 @@
  * API client utility for making authenticated requests to the backend.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// In production, use empty string for relative URLs (same host)
+// In development, use localhost:8000
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface FetchOptions extends RequestInit {
   body?: any;
