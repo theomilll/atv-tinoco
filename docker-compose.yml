@@ -1,4 +1,4 @@
-# Docker Compose for Flask backend
+# Docker Compose for ChatGepeto
 
 services:
   backend:
@@ -9,7 +9,6 @@ services:
     volumes:
       - ./backend/app:/app/app
       - ./backend/wsgi.py:/app/wsgi.py
-      - media_volume:/app/media
     environment:
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
       - DATABASE_URL=${DATABASE_URL:-sqlite:///db.sqlite3}
@@ -18,8 +17,6 @@ services:
       - GROQ_API_KEY=${GROQ_API_KEY}
       - OLLAMA_HOST=${OLLAMA_HOST}
       - OLLAMA_MODEL=${OLLAMA_MODEL}
-      - USE_CELERY=${USE_CELERY:-False}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
     ports:
       - "8000:8000"
     command: flask run --host=0.0.0.0 --port=8000
@@ -30,66 +27,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  # PostgreSQL Database (production)
-  postgres:
-    image: pgvector/pgvector:pg16
-    container_name: chatgepeto-postgres
-    environment:
-      POSTGRES_DB: chatgepeto
-      POSTGRES_USER: chatgepeto
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chatgepeto_dev}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chatgepeto"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    profiles:
-      - production
-
-  # Redis for Celery
-  redis:
-    image: redis:7-alpine
-    container_name: chatgepeto-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    profiles:
-      - production
-
-  # Celery Worker (production only)
-  celery:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: chatgepeto-celery
-    volumes:
-      - ./backend/app:/app/app
-      - media_volume:/app/media
-    environment:
-      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///db.sqlite3}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
-      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
-    command: celery -A celery_worker.celery worker -l info
-    depends_on:
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    profiles:
-      - production
 
   frontend:
     build:
@@ -110,7 +47,6 @@ services:
     container_name: chatgepeto-nginx
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - media_volume:/media
     ports:
       - "80:80"
     depends_on:
@@ -131,7 +67,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  media_volume:
   ollama_data:
-  postgres_data:
-  redis_data:

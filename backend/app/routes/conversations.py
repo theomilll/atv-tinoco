@@ -1,18 +1,13 @@
 """Conversation API endpoints."""
 import json
 
-from flask import Blueprint, request, jsonify, Response, stream_with_context
-from flask_login import login_required, current_user
+from flask import Blueprint, Response, jsonify, request, stream_with_context
+from flask_login import current_user, login_required
 
-from ..extensions import db, csrf
-from ..models import Conversation, Message, Citation
-from ..schemas import ConversationSchema, ConversationDetailSchema, MessageSchema
-from ..services import (
-    RAGService,
-    process_attachment,
-    get_base64_for_image,
-    extract_text_from_doc,
-)
+from ..extensions import csrf, db
+from ..models import Conversation, Message
+from ..schemas import ConversationDetailSchema, ConversationSchema, MessageSchema
+from ..services import get_llm_provider
 
 bp = Blueprint('conversations', __name__, url_prefix='/api/conversations')
 
@@ -106,68 +101,28 @@ def send_message(id):
         id=id, user_id=current_user.id
     ).first_or_404()
 
-    # Handle content from form-data or JSON
-    if request.content_type and 'multipart/form-data' in request.content_type:
-        user_message_content = request.form.get('content', '')
-        files = request.files.getlist('files')
-    else:
-        data = request.get_json() or {}
-        user_message_content = data.get('content', '')
-        files = []
+    data = request.get_json() or {}
+    user_message_content = data.get('content', '').strip()
 
-    if not user_message_content.strip() and not files:
-        return jsonify({'error': 'Message content or files required'}), 400
+    if not user_message_content:
+        return jsonify({'error': 'Message content required'}), 400
 
     try:
-        # Process file attachments
-        attachments = []
-        images_base64 = []
-        doc_context = ""
-
-        for file in files:
-            try:
-                attachment = process_attachment(file, current_user.id)
-                attachments.append(attachment)
-
-                if attachment['category'] == 'image':
-                    images_base64.append(get_base64_for_image(attachment['file_path']))
-                else:
-                    extracted = extract_text_from_doc(
-                        attachment['file_path'],
-                        attachment['file_type']
-                    )
-                    if extracted:
-                        doc_context += f"\n[Attached: {attachment['filename']}]\n{extracted}\n"
-            except ValueError as e:
-                return jsonify({'error': str(e)}), 400
-
-        # Append extracted document text to message content
-        full_content = user_message_content
-        if doc_context:
-            full_content += doc_context
-
         # Create user message
         user_message = Message(
             conversation=conversation,
             role='user',
-            content=full_content,
-            attachments=attachments
+            content=user_message_content
         )
         db.session.add(user_message)
         db.session.commit()
 
-        # Auto-title conversation if this is the first message
+        # Auto-title conversation if first message
         if conversation.messages.count() == 1 and not conversation.title:
-            try:
-                rag_service = RAGService()
-                title = rag_service.generate_conversation_title(user_message_content)
-                conversation.title = title
-                db.session.commit()
-            except Exception:
-                conversation.title = user_message_content[:50]
-                db.session.commit()
+            conversation.title = user_message_content[:50]
+            db.session.commit()
 
-        # Get conversation history for context
+        # Get conversation history
         conversation_history = []
         previous_messages = conversation.messages.filter(
             Message.id != user_message.id
@@ -179,26 +134,15 @@ def send_message(id):
                 'content': msg.content
             })
 
-        # RAG pipeline
-        rag_service = RAGService()
-
-        # Retrieve relevant chunks
-        relevant_chunks = rag_service.retrieve_relevant_chunks(
-            query=user_message_content,
-            user_id=current_user.id,
-            top_k=5
-        )
-
-        # Build context
-        context = rag_service.build_context_from_chunks(relevant_chunks)
+        # Build messages for LLM
+        system_prompt = "You are ChatGepeto, a helpful AI assistant. Be concise and accurate."
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(conversation_history)
+        messages.append({"role": "user", "content": user_message_content})
 
         # Generate AI response
-        ai_response_content = rag_service.generate_response(
-            user_message=user_message_content,
-            context=context,
-            conversation_history=conversation_history,
-            images=images_base64 if images_base64 else None
-        )
+        llm = get_llm_provider()
+        ai_response_content = llm.chat(messages, temperature=0.7, max_tokens=500)
 
         # Create assistant message
         assistant_message = Message(
@@ -207,16 +151,6 @@ def send_message(id):
             content=ai_response_content
         )
         db.session.add(assistant_message)
-        db.session.commit()
-
-        # Create citations
-        for chunk, relevance_score in relevant_chunks:
-            citation = Citation(
-                message=assistant_message,
-                chunk=chunk,
-                relevance_score=relevance_score
-            )
-            db.session.add(citation)
         db.session.commit()
 
         return jsonify({
@@ -261,14 +195,8 @@ def send_message_stream(id):
 
             # Auto-title if first message
             if conversation.messages.count() == 1 and not conversation.title:
-                try:
-                    rag_service = RAGService()
-                    title = rag_service.generate_conversation_title(user_message_content)
-                    conversation.title = title
-                    db.session.commit()
-                except Exception:
-                    conversation.title = user_message_content[:50]
-                    db.session.commit()
+                conversation.title = user_message_content[:50]
+                db.session.commit()
 
             # Get conversation history
             conversation_history = []
@@ -282,40 +210,16 @@ def send_message_stream(id):
                     'content': msg.content
                 })
 
-            # RAG pipeline
-            rag_service = RAGService()
-            relevant_chunks = rag_service.retrieve_relevant_chunks(
-                query=user_message_content,
-                user_id=current_user.id,
-                top_k=5
-            )
-            context = rag_service.build_context_from_chunks(relevant_chunks)
-
             # Build messages for LLM
-            system_prompt = f"""You are ChatGepeto, a helpful AI assistant that answers questions based on provided documents.
-
-Context from documents:
-{context}
-
-Instructions:
-- Answer the user's question using the context provided above
-- If the context doesn't contain relevant information, say so clearly
-- Be concise and accurate
-- Cite specific documents when referencing information"""
-
+            system_prompt = "You are ChatGepeto, a helpful AI assistant. Be concise and accurate."
             messages = [{"role": "system", "content": system_prompt}]
-            if conversation_history:
-                for msg in conversation_history[-10:]:
-                    messages.append({"role": msg["role"], "content": msg["content"]})
+            messages.extend(conversation_history)
             messages.append({"role": "user", "content": user_message_content})
 
             # Stream response
+            llm = get_llm_provider()
             full_response = ""
-            for chunk in rag_service.llm.chat_stream(
-                messages,
-                temperature=0.7,
-                max_tokens=500
-            ):
+            for chunk in llm.chat_stream(messages, temperature=0.7, max_tokens=500):
                 full_response += chunk
                 yield f"event: chunk\ndata: {json.dumps({'content': chunk})}\n\n"
 
@@ -328,17 +232,7 @@ Instructions:
             db.session.add(assistant_message)
             db.session.commit()
 
-            # Create citations
-            for chunk, relevance_score in relevant_chunks:
-                citation = Citation(
-                    message=assistant_message,
-                    chunk=chunk,
-                    relevance_score=relevance_score
-                )
-                db.session.add(citation)
-            db.session.commit()
-
-            # Send final message with citations
+            # Send final message
             assistant_msg_data = MessageSchema().dump(assistant_message)
             yield f"event: assistant_message\ndata: {json.dumps(assistant_msg_data)}\n\n"
             yield f"event: done\ndata: {json.dumps({'status': 'complete'})}\n\n"

@@ -1,9 +1,10 @@
 """Flask application factory."""
 import os
+
 from flask import Flask
 
 from .config import config
-from .extensions import db, migrate, login_manager, cors, csrf, flask_admin
+from .extensions import cors, csrf, db, flask_admin, login_manager, migrate
 
 
 def create_app(config_name=None):

@@ -16,31 +16,20 @@ marshmallow-sqlalchemy==0.29.0
 SQLAlchemy==2.0.25
 psycopg2-binary==2.9.9
 
-# Async tasks
-celery[redis]==5.3.6
-redis==5.0.1
-
 # Server
 gunicorn==21.2.0
-
-# ML/NLP (unchanged from Django)
-sentence-transformers>=3.0.0
-numpy==1.26.3
-rank-bm25==0.2.2
 
 # LLM providers
 groq==0.4.2
 httpx==0.27.0
-
-# Document processing
-pypdf2==3.0.1
-python-docx==0.8.11
-beautifulsoup4==4.12.3
-lxml==5.1.0
-requests==2.31.0
 
 # Monitoring
 sentry-sdk[flask]==1.39.1
 
 # Utils
 python-decouple==3.8
+
+# Development/Testing
+ruff==0.8.2
+pytest==8.3.4
+pytest-cov==6.0.0

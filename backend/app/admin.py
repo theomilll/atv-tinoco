@@ -2,7 +2,7 @@
 from flask_admin.contrib.sqla import ModelView
 from flask_login import current_user
 
-from .models import User, Conversation, Message, Document, DocumentChunk, Embedding, Citation
+from .models import Conversation, Message, User
 
 
 class SecureModelView(ModelView):
@@ -21,7 +21,7 @@ class UserAdmin(SecureModelView):
     column_list = ['id', 'username', 'email', 'is_active', 'is_superuser', 'created_at']
     column_searchable_list = ['username', 'email']
     column_filters = ['is_active', 'is_superuser']
-    form_excluded_columns = ['password_hash', 'conversations', 'documents']
+    form_excluded_columns = ['password_hash', 'conversations']
 
     def on_model_change(self, form, model, is_created):
         if form.password_hash and form.password_hash.data:
@@ -42,23 +42,8 @@ class MessageAdmin(SecureModelView):
     column_filters = ['role', 'conversation_id']
 
 
-class DocumentAdmin(SecureModelView):
-    """Document admin view."""
-    column_list = ['id', 'user', 'title', 'status', 'file_type', 'created_at']
-    column_searchable_list = ['title']
-    column_filters = ['status', 'file_type', 'user_id']
-
-
-class DocumentChunkAdmin(SecureModelView):
-    """DocumentChunk admin view."""
-    column_list = ['id', 'document', 'chunk_index', 'created_at']
-    column_filters = ['document_id']
-
-
 def setup_admin(admin_instance, db):
     """Setup Flask-Admin views."""
     admin_instance.add_view(UserAdmin(User, db.session))
     admin_instance.add_view(ConversationAdmin(Conversation, db.session))
     admin_instance.add_view(MessageAdmin(Message, db.session))
-    admin_instance.add_view(DocumentAdmin(Document, db.session))
-    admin_instance.add_view(DocumentChunkAdmin(DocumentChunk, db.session))

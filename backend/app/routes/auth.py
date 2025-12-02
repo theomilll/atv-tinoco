@@ -1,8 +1,8 @@
 """Authentication endpoints."""
-from flask import Blueprint, request, jsonify
-from flask_login import login_user, logout_user, login_required, current_user
+from flask import Blueprint, jsonify, request
+from flask_login import current_user, login_required, login_user, logout_user
 
-from ..extensions import db, csrf
+from ..extensions import csrf
 from ..models import User
 from ..schemas import UserSchema
 
