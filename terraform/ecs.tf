@@ -46,7 +46,7 @@ resource "aws_ecs_task_definition" "main" {
         },
         {
           name  = "DATABASE_URL"
-          value = "sqlite:///data/chatgepeto.db"
+          value = "sqlite:////app/data/chatgepeto.db"
         },
         {
           name  = "CORS_ALLOWED_ORIGINS"

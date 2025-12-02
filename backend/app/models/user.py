@@ -25,7 +25,8 @@ class User(UserMixin, db.Model):
 
     # Relationships
     conversations = db.relationship('Conversation', backref='user', lazy='dynamic', cascade='all, delete-orphan')
-    documents = db.relationship('Document', backref='user', lazy='dynamic', cascade='all, delete-orphan')
+    # TODO: Add documents relationship when Document model is created
+    # documents = db.relationship('Document', backref='user', lazy='dynamic', cascade='all, delete-orphan')
 
     def set_password(self, password):
         """Hash and set password."""

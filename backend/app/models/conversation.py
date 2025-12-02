@@ -43,14 +43,14 @@ class Message(db.Model):
     # Schema: [{"filename": str, "file_type": str, "file_path": str, "category": "image"|"document"}]
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
-    citations = db.relationship(
-        'Citation',
-        backref='message',
-        lazy='dynamic',
-        cascade='all, delete-orphan',
-        order_by='Citation.relevance_score.desc()'
-    )
+    # TODO: Add citations relationship when Citation model is created
+    # citations = db.relationship(
+    #     'Citation',
+    #     backref='message',
+    #     lazy='dynamic',
+    #     cascade='all, delete-orphan',
+    #     order_by='Citation.relevance_score.desc()'
+    # )
 
     def __repr__(self):
         return f'<Message {self.role}: {self.content[:50]}>'

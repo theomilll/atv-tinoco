@@ -39,6 +39,9 @@ COPY backend/app ./app
 COPY backend/wsgi.py .
 COPY backend/manage.py .
 
+# Create data directory for SQLite
+RUN mkdir -p /app/data
+
 # Copy and set up entrypoint
 COPY backend/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
