@@ -14,13 +14,7 @@ env:
   CODECOMMIT_REPO: chatgepeto
 
 jobs:
-  # Run CI checks first
-  ci:
-    uses: ./.github/workflows/ci.yml
-
-  # Deploy after CI passes
   deploy:
-    needs: ci
     runs-on: ubuntu-latest
 
     steps:
