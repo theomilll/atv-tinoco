@@ -55,7 +55,7 @@ class ProductionConfig(Config):
     """Production configuration."""
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
-    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = False  # ALB is HTTP-only
 
     # Sentry
     SENTRY_DSN = os.environ.get('SENTRY_DSN')
