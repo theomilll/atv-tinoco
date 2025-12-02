@@ -178,6 +178,14 @@ resource "aws_iam_user_policy" "github_actions" {
           "codecommit:GitPush"
         ]
         Resource = aws_codecommit_repository.main.arn
+      },
+      {
+        Sid    = "DescribeALB"
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:DescribeLoadBalancers"
+        ]
+        Resource = "*"
       }
     ]
   })
