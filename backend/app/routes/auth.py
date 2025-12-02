@@ -9,10 +9,14 @@ from ..schemas import UserSchema
 bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 
-@bp.route('/login/', methods=['POST'])
+@bp.route('/login/', methods=['GET', 'POST'])
 @csrf.exempt
 def login():
     """Login endpoint - creates session."""
+    if request.method == 'GET':
+        # Return empty response for CSRF token fetch
+        return jsonify({'status': 'ready'})
+
     data = request.get_json() or {}
     username = data.get('username')
     password = data.get('password')

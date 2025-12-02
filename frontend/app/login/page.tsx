@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 import { Barcode } from '@/components'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -34,41 +36,13 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const csrfResponse = await fetch('/api/auth/login/', {
-        method: 'GET',
-        credentials: 'include',
-      })
-      const csrfToken = csrfResponse.headers.get('X-CSRFToken') || getCookie('csrftoken')
-
-      const response = await fetch('/api/auth/login/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken || '',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ username, password }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        router.push('/chat')
-      } else {
-        setError(data.error || 'ACCESS DENIED')
-      }
+      await login(username, password)
+      router.push('/chat')
     } catch {
-      setError('CONNECTION FAILED')
+      setError('ACCESS DENIED')
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const getCookie = (name: string) => {
-    const value = `; ${document.cookie}`
-    const parts = value.split(`; ${name}=`)
-    if (parts.length === 2) return parts.pop()?.split(';').shift()
-    return ''
   }
 
   return (

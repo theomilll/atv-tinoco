@@ -32,6 +32,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
     container_name: chatgepeto-frontend
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
