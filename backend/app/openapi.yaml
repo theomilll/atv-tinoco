@@ -1,0 +1,484 @@
+openapi: 3.0.3
+info:
+  title: ChatGepeto API
+  description: API do assistente educacional inteligente ChatGepeto
+  version: 1.0.0
+  contact:
+    name: ChatGepeto Team
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: http://{alb-dns}
+    description: AWS Production
+    variables:
+      alb-dns:
+        default: chatgepeto-alb.us-east-1.elb.amazonaws.com
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Auth
+    description: Authentication endpoints
+  - name: Conversations
+    description: Chat conversation management
+
+paths:
+  /api/health/:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Verifica se a API está funcionando
+      operationId: healthCheck
+      responses:
+        "200":
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /api/auth/login/:
+    post:
+      tags:
+        - Auth
+      summary: Login
+      description: Autentica usuário com username e password
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: gepetobot
+                password:
+                  type: string
+                  format: password
+                  example: cesariscool
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/auth/logout/:
+    post:
+      tags:
+        - Auth
+      summary: Logout
+      description: Encerra a sessão do usuário
+      operationId: logout
+      security:
+        - sessionAuth: []
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/auth/me/:
+    get:
+      tags:
+        - Auth
+      summary: Current user
+      description: Retorna dados do usuário autenticado
+      operationId: getCurrentUser
+      security:
+        - sessionAuth: []
+      responses:
+        "200":
+          description: Current user data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/conversations/:
+    get:
+      tags:
+        - Conversations
+      summary: List conversations
+      description: Lista todas as conversas do usuário
+      operationId: listConversations
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: search
+          in: query
+          description: Buscar por título
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      tags:
+        - Conversations
+      summary: Create conversation
+      description: Cria uma nova conversa
+      operationId: createConversation
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Minha conversa
+      responses:
+        "201":
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/conversations/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Conversation ID
+        schema:
+          type: integer
+
+    get:
+      tags:
+        - Conversations
+      summary: Get conversation
+      description: Retorna detalhes da conversa com mensagens
+      operationId: getConversation
+      security:
+        - sessionAuth: []
+      responses:
+        "200":
+          description: Conversation details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      tags:
+        - Conversations
+      summary: Update conversation
+      description: Atualiza título da conversa
+      operationId: updateConversation
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Novo título
+      responses:
+        "200":
+          description: Conversation updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags:
+        - Conversations
+      summary: Delete conversation
+      description: Remove conversa e todas as mensagens
+      operationId: deleteConversation
+      security:
+        - sessionAuth: []
+      responses:
+        "204":
+          description: Conversation deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/conversations/{id}/messages/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Conversation ID
+        schema:
+          type: integer
+
+    post:
+      tags:
+        - Conversations
+      summary: Send message
+      description: Envia mensagem e recebe resposta do assistente
+      operationId: sendMessage
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  example: O que é machine learning?
+      responses:
+        "200":
+          description: Assistant response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_message:
+                    $ref: "#/components/schemas/Message"
+                  assistant_message:
+                    $ref: "#/components/schemas/Message"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/conversations/{id}/messages/stream/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Conversation ID
+        schema:
+          type: integer
+
+    post:
+      tags:
+        - Conversations
+      summary: Send message (streaming)
+      description: Envia mensagem e recebe resposta via Server-Sent Events
+      operationId: sendMessageStream
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  example: Explique redes neurais
+      responses:
+        "200":
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Events:
+                  - user_message: {Message} - Mensagem do usuário salva
+                  - chunk: {content: string} - Fragmento da resposta
+                  - assistant_message: {Message} - Mensagem completa do assistente
+                  - done: {} - Stream finalizado
+                  - error: {error: string} - Erro ocorrido
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Session-based authentication via Flask-Login
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: gepetobot
+        email:
+          type: string
+          format: email
+          example: gepetobot@example.com
+        first_name:
+          type: string
+          example: Gepeto
+        last_name:
+          type: string
+          example: Bot
+        is_active:
+          type: boolean
+          example: true
+        is_staff:
+          type: boolean
+          example: false
+        is_superuser:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Conversa sobre IA
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        message_count:
+          type: integer
+          example: 5
+
+    ConversationDetail:
+      allOf:
+        - $ref: "#/components/schemas/Conversation"
+        - type: object
+          properties:
+            messages:
+              type: array
+              items:
+                $ref: "#/components/schemas/Message"
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        role:
+          type: string
+          enum: [user, assistant, system]
+          example: user
+        content:
+          type: string
+          example: O que é inteligência artificial?
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attachment"
+        created_at:
+          type: string
+          format: date-time
+
+    Attachment:
+      type: object
+      properties:
+        filename:
+          type: string
+          example: document.pdf
+        file_type:
+          type: string
+          example: application/pdf
+        file_path:
+          type: string
+          example: /uploads/doc123.pdf
+        category:
+          type: string
+          example: document
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Invalid credentials
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: Authentication required
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: Resource not found

@@ -1,119 +1,152 @@
 # ChatGepeto
 
-NotebookLM-like chatbot built with Django and Next.js.
+Assistente educacional inteligente usando Flask (backend) e Next.js (frontend), com deploy na AWS via ECS Fargate.
 
-## Project Structure
+## Arquitetura
+
+```
+┌─────────────┐      ┌──────────────┐      ┌─────────────┐
+│   GitHub    │─────▶│GitHub Actions│─────▶│  AWS ECR    │
+│   (Code)    │      │   (CI/CD)    │      │  (Images)   │
+└─────────────┘      └──────────────┘      └──────┬──────┘
+                            │                     │
+                            ▼                     ▼
+                     ┌──────────────┐      ┌─────────────┐
+                     │ CodeCommit   │      │ ECS Fargate │
+                     │   (Mirror)   │      │  (Deploy)   │
+                     └──────────────┘      └──────┬──────┘
+                                                  │
+                                                  ▼
+                                           ┌─────────────┐
+                                           │     ALB     │
+                                           │ (Public IP) │
+                                           └─────────────┘
+```
+
+Ver [docs/architecture.md](docs/architecture.md) para diagrama completo.
+
+## Estrutura
 
 ```
 chatgepeto/
-├── backend/                    # Django backend
-│   ├── chatgepeto/            # Django settings
-│   ├── chat/                  # Chat conversations
-│   ├── documents/             # Document management
-│   ├── users/                 # User management
-│   ├── api/                   # API endpoints
-│   ├── embeddings/            # Vector embeddings
-│   ├── sources/               # Citation tracking
+├── backend/                    # Flask backend
+│   ├── app/
+│   │   ├── __init__.py        # App factory
+│   │   ├── config.py          # Configurações
+│   │   ├── models/            # SQLAlchemy models
+│   │   ├── routes/            # Blueprints (API)
+│   │   ├── schemas/           # Marshmallow schemas
+│   │   └── services/          # LLM providers
+│   ├── tests/
 │   └── requirements.txt
 ├── frontend/                   # Next.js frontend
-│   ├── app/                   # App router pages
-│   ├── components/            # React components
+│   ├── app/                   # App router
 │   └── package.json
-├── nginx/                      # Nginx configuration
+├── terraform/                  # AWS Infrastructure
+│   ├── main.tf
+│   ├── vpc.tf
+│   ├── ecr.tf
+│   ├── ecs.tf
+│   ├── alb.tf
+│   ├── iam.tf
+│   └── cloudwatch.tf
+├── .github/workflows/
+│   ├── ci.yml                 # Lint, test, build
+│   └── deploy.yml             # Deploy to AWS
 ├── docker-compose.yml
-├── Dockerfile.backend
-└── Dockerfile.frontend
+├── Dockerfile.backend         # Multi-stage build
+└── Dockerfile.frontend        # Multi-stage build
 ```
 
-## Quick Start
+## Quick Start (Docker)
 
-### Docker Setup (Recommended)
-
-1. Copy environment file:
 ```bash
+# Copiar env
 cp .env.example .env
-```
 
-2. Start everything with Docker:
-```bash
+# Subir serviços
 docker-compose up --build
+
+# Criar superuser
+docker-compose exec backend python manage.py create-superuser
 ```
 
-This automatically:
-- Builds backend & frontend containers
-- Runs database migrations
-- Collects static files
-- Starts development servers
-
-3. Create the superuser (in a new terminal):
-```bash
-docker-compose exec backend python manage.py create_superuser_gepeto
-```
-
-4. Access:
+**Acesso:**
 - Frontend: http://localhost:3000
-- Login page: http://localhost:3000/login
-- Backend API: http://localhost:8000/api
-- Django Admin: http://localhost:8000/admin
+- API: http://localhost:8000/api
+- Admin: http://localhost:8000/admin
 
-### Local Development (without Docker)
+**Credenciais:** `gepetobot` / `cesariscool`
+
+## API Endpoints
+
+| Endpoint | Método | Descrição |
+|----------|--------|-----------|
+| `/api/health/` | GET | Health check |
+| `/api/auth/login/` | POST | Login |
+| `/api/auth/logout/` | POST | Logout |
+| `/api/auth/me/` | GET | Usuário atual |
+| `/api/conversations/` | GET, POST | Listar/criar conversas |
+| `/api/conversations/<id>/` | GET, PATCH, DELETE | Detalhe conversa |
+| `/api/conversations/<id>/messages/` | POST | Enviar mensagem |
+| `/api/conversations/<id>/messages/stream/` | POST | Streaming (SSE) |
+
+## Deploy AWS
+
+### 1. Infraestrutura (Terraform)
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# Editar terraform.tfvars com suas configs
+
+terraform init
+terraform plan
+terraform apply
+```
+
+### 2. Secrets GitHub
+
+Adicionar no GitHub (Settings > Secrets):
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+
+### 3. Deploy
+
+Push para `main` dispara deploy automático via GitHub Actions.
+
+## Stack
 
 **Backend:**
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py create_superuser_gepeto  # Creates gepetobot user
-python manage.py runserver
-```
+- Flask 3.0 + SQLAlchemy + Marshmallow
+- Groq API (LLM) + Ollama (local)
+- Gunicorn + Docker
 
 **Frontend:**
+- Next.js 14 + TypeScript + Tailwind
+
+**AWS:**
+- ECS Fargate + ALB + ECR
+- CloudWatch + SSM
+- CodeCommit (mirror)
+
+**CI/CD:**
+- GitHub Actions (lint, test, build, deploy)
+
+## Testes
+
 ```bash
-cd frontend
-npm install
-npm run dev
+# Backend
+cd backend && pytest --cov=app
+
+# Frontend
+cd frontend && npm run test
+
+# Lint
+ruff check backend/
+npm run lint --prefix frontend
 ```
 
-## Authentication
+## Licença
 
-**Test Credentials:**
-- Username: `gepetobot`
-- Password: `cesariscool`
-
-**API Endpoints:**
-- `POST /api/auth/login/` - Login with username/password
-- `POST /api/auth/logout/` - Logout (requires authentication)
-- `GET /api/auth/me/` - Get current user (requires authentication)
-
-**Creating the test superuser:**
-
-With Docker:
-```bash
-docker-compose exec backend python manage.py create_superuser_gepeto
-```
-
-Without Docker:
-```bash
-cd backend
-python manage.py create_superuser_gepeto
-```
-
-## Django Apps
-
-- **users**: Custom user model
-- **chat**: Conversations and messages
-- **documents**: File uploads and chunking
-- **embeddings**: Vector storage for RAG
-- **sources**: Citation tracking
-- **api**: REST API endpoints
-
-## Next Steps
-
-1. ✅ Authentication system (login/logout)
-2. Implement chat API endpoints
-3. Build frontend chat interface
-4. Add document upload functionality
-5. Implement RAG with embeddings
-6. Add citations and source tracking
+MIT

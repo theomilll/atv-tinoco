@@ -1,0 +1,16 @@
+# Example Terraform variables file
+# Copy to terraform.tfvars and fill in values
+
+aws_region  = "us-east-1"
+environment = "production"
+
+# Application secrets (optional - can be set later via SSM)
+# groq_api_key = "gsk_..."
+# secret_key   = "your-secret-key"
+
+# ECS Configuration
+desired_count   = 1
+backend_cpu     = 256
+backend_memory  = 512
+frontend_cpu    = 256
+frontend_memory = 512

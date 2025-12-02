@@ -1,0 +1,102 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_BACKEND_REPO: chatgepeto-backend
+  ECR_FRONTEND_REPO: chatgepeto-frontend
+  ECS_CLUSTER: chatgepeto-cluster
+  ECS_SERVICE: chatgepeto-service
+  CODECOMMIT_REPO: chatgepeto
+
+jobs:
+  # Run CI checks first
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  # Deploy after CI passes
+  deploy:
+    needs: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -f Dockerfile.backend -t $ECR_REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_BACKEND_REPO:latest .
+          docker push $ECR_REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_BACKEND_REPO:latest
+
+      - name: Build and push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -f Dockerfile.frontend -t $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_FRONTEND_REPO:latest .
+          docker push $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_FRONTEND_REPO:latest
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --force-new-deployment
+
+      - name: Wait for deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE
+
+      - name: Push to CodeCommit
+        env:
+          AWS_CODECOMMIT_URL: https://git-codecommit.${{ env.AWS_REGION }}.amazonaws.com/v1/repos/${{ env.CODECOMMIT_REPO }}
+        run: |
+          git config --global credential.helper '!aws codecommit credential-helper $@'
+          git config --global credential.UseHttpPath true
+          git remote add codecommit $AWS_CODECOMMIT_URL || git remote set-url codecommit $AWS_CODECOMMIT_URL
+          git push codecommit HEAD:main --force
+
+      - name: Get ALB URL
+        id: alb
+        run: |
+          ALB_DNS=$(aws elbv2 describe-load-balancers \
+            --names chatgepeto-alb \
+            --query 'LoadBalancers[0].DNSName' \
+            --output text)
+          echo "url=http://$ALB_DNS" >> $GITHUB_OUTPUT
+          echo "Application deployed to: http://$ALB_DNS"
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backend Image:** ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_BACKEND_REPO }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend Image:** ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_FRONTEND_REPO }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **ECS Cluster:** ${{ env.ECS_CLUSTER }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **ECS Service:** ${{ env.ECS_SERVICE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Application URL:** ${{ steps.alb.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **CodeCommit:** Synced to ${{ env.CODECOMMIT_REPO }}" >> $GITHUB_STEP_SUMMARY
